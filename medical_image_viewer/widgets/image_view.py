@@ -7,10 +7,14 @@ import pyqtgraph as pg
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QSlider
 from PySide2 import QtCore
 
+from store import State
+
 
 class MivImageView(QWidget):
-    def __init__(self):
+    def __init__(self, state: State):
         super().__init__()
+        self.state = state
+
         self.root_layout = QVBoxLayout()
         self.image_view = pg.ImageView()
         self.slice_slider = QSlider(QtCore.Qt.Horizontal)
@@ -19,10 +23,16 @@ class MivImageView(QWidget):
         self.root_layout.addWidget(self.slice_slider)
         self.setLayout(self.root_layout)
 
-    def set_image(self, img: np.ndarray):
-        assert img.ndim == 3
-        self.slice_slider.setRange(1, len(img))
-        self.image_view.setImage(img[0])
+        self.slice_slider.valueChanged.connect(self._on_slice_slider_value_changed)
+
+    def _on_slice_slider_value_changed(self):
+        index = self.slice_slider.value()
+        self.image_view.setImage(self.state.volume[index])
+
+    def refresh(self):
+        # TODO some other updating operations
+        self._on_slice_slider_value_changed()
+        self.slice_slider.setRange(0, self.state.volume.shape[0] - 1)
 
     def show_random_image(self):
         img = np.random.random((60, 60, 60))

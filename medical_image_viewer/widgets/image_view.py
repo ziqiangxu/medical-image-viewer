@@ -10,29 +10,41 @@ from PySide2 import QtCore
 from store import State
 
 
-class MivImageView(QWidget):
-    def __init__(self, state: State):
-        super().__init__()
-        self.state = state
-
+class UiForm:
+    def __init__(self, parent: QWidget):
         self.root_layout = QVBoxLayout()
         self.image_view = pg.ImageView()
         self.slice_slider = QSlider(QtCore.Qt.Horizontal)
 
+        # TODO display the frame
+        self.text_slice = pg.TextItem()
+
         self.root_layout.addWidget(self.image_view)
         self.root_layout.addWidget(self.slice_slider)
-        self.setLayout(self.root_layout)
 
-        self.slice_slider.valueChanged.connect(self._on_slice_slider_value_changed)
+        parent.setLayout(self.root_layout)
 
-    def _on_slice_slider_value_changed(self):
-        index = self.slice_slider.value()
-        self.image_view.setImage(self.state.volume[index])
+
+class MivImageView(QWidget):
+    def __init__(self, state: State):
+        super().__init__()
+        self.state = state
+        self.ui = UiForm(self)
+
+        self.ui.slice_slider.valueChanged.connect(self._show_current_slice)
+
+    def _show_current_slice(self):
+        index = self.ui.slice_slider.value()
+        self.ui.image_view.setImage(self.state.volume[index])
+        self.ui.image_view.setImage(self.state.volume[index])
 
     def refresh(self):
         # TODO some other updating operations
-        self._on_slice_slider_value_changed()
-        self.slice_slider.setRange(0, self.state.volume.shape[0] - 1)
+        self.ui.slice_slider.setRange(0, self.state.volume.shape[0] - 1)
+        self._show_current_slice()
+
+        # TODO remove the test code
+        # pg.image(self.state.volume)
 
     def show_random_image(self):
         img = np.random.random((60, 60, 60))

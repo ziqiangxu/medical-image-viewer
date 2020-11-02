@@ -14,7 +14,7 @@ from utils import dicom
 
 
 class MainWindow(QWidget):
-    def __init__(self):
+    def __init__(self, files: List[str] = []):
         super().__init__()
         self.state = State()
         self.menu_bar = QMenuBar(self)
@@ -39,14 +39,32 @@ class MainWindow(QWidget):
         self.right_layout.addWidget(self.image_viewer)
 
         self.root_layout.addWidget(self.menu_bar)
-        self.main_layout.addLayout(self.left_layout)
-        self.main_layout.addLayout(self.right_layout)
+        self.main_layout.addLayout(self.left_layout, 2)
+        self.main_layout.addLayout(self.right_layout, 6)
         self.root_layout.addLayout(self.main_layout)
         self.setLayout(self.root_layout)
+
+        if files:
+            self._load_dcm_files(files)
 
     def _display_images(self, volume: np.ndarray, files: List[str]):
         self.state.set_volume(volume, files)
         self.image_viewer.refresh()
+
+    def _load_dcm_files(self, files: List[str]):
+        """
+        Load DICOM files
+        :param files:
+        :return:
+        """
+        try:
+            files, volume = dicom.load_dcm_series(files)
+            self._display_images(volume, files)
+            # TODO display the image in the image view
+
+        except dicom.DcmLoadingException:
+            # TODO show error box
+            pass
 
     def open_files(self):
         """
@@ -55,21 +73,24 @@ class MainWindow(QWidget):
         """
         files, _ = QFileDialog.getOpenFileNames()
         if files:
-            try:
-                files, volume = dicom.load_dcm_series(files)
-                self._display_images(volume, files)
-                # TODO display the image in the image view
-
-            except dicom.DcmLoadingException:
-                # TODO show error box
-                pass
+            self._load_dcm_files(files)
 
 
 if __name__ == '__main__':
     import sys
+    import os
+
     app = QtWidgets.QApplication([])
 
-    widget = MainWindow()
+    dcm_files = []
+    if len(sys.argv) > 1:
+        dcm_dir = sys.argv[1]
+        dcm_files = os.listdir(dcm_dir)
+        for i in range(len(dcm_files)):
+            dcm_files[i] = os.path.join(dcm_dir, dcm_files[i])
+
+    widget = MainWindow(files=dcm_files)
+
     widget.resize(800, 600)
     widget.show()
 

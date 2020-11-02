@@ -4,14 +4,13 @@ E-mail: ziqiang_xu@qq.com
 """
 from typing import List
 
-from PySide2 import QtCore, QtWidgets
-from PySide2.QtWidgets import QWidget, QLabel, QLineEdit, QPushButton, QSlider, QMenuBar, QMenu, QAction, QFileDialog
-import pyqtgraph as pg
+from PySide2 import QtWidgets
+from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog
 import numpy as np
 
-import public
 from store import State
 from widgets.image_view import MivImageView
+from utils import dicom
 
 
 class MainWindow(QWidget):
@@ -57,11 +56,11 @@ class MainWindow(QWidget):
         files, _ = QFileDialog.getOpenFileNames()
         if files:
             try:
-                files, volume = public.load_dcm_series(files)
+                files, volume = dicom.load_dcm_series(files)
                 self._display_images(volume, files)
                 # TODO display the image in the image view
 
-            except public.DcmLoadingException:
+            except dicom.DcmLoadingException:
                 # TODO show error box
                 pass
 

@@ -4,7 +4,7 @@ E-mail: ziqiang_xu@qq.com
 """
 import numpy as np
 import pyqtgraph as pg
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QSlider
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QSlider, QLabel, QHBoxLayout
 from PySide2 import QtCore
 
 from store import State
@@ -13,14 +13,30 @@ from store import State
 class UiForm:
     def __init__(self, parent: QWidget):
         self.root_layout = QVBoxLayout()
-        self.image_view = pg.ImageView()
+
+        self.graphic_view = pg.GraphicsView()  # 被改写过的QGraphicView
+        self.view_box = pg.ViewBox()  # 用于盛放图像控件，支持缩放功能
+        self.graphic_view.setCentralItem(self.view_box)
+
+        self.image_item = pg.ImageItem()  # 显示图像的控件
+        self.view_box.addItem(self.image_item)
+        # self.graphic_view.addItem(self.image_item)
+
+        self.text_top_right = pg.TextItem()
+        self.text_top_right.setText('the text item')
+        self.graphic_view.addItem(self.text_top_right)
+
+        # Qt的相关控件
         self.slice_slider = QSlider(QtCore.Qt.Horizontal)
+        self.slice_label = QLabel()
 
-        # TODO display the frame
-        self.text_slice = pg.TextItem()
+        # 布局相关
+        self.root_layout.addWidget(self.graphic_view)
 
-        self.root_layout.addWidget(self.image_view)
-        self.root_layout.addWidget(self.slice_slider)
+        self.layout_slider = QHBoxLayout()
+        self.layout_slider.addWidget(self.slice_slider)
+        self.layout_slider.addWidget(self.slice_label)
+        self.root_layout.addLayout(self.layout_slider)
 
         parent.setLayout(self.root_layout)
 
@@ -35,8 +51,10 @@ class MivImageView(QWidget):
 
     def _show_current_slice(self):
         index = self.ui.slice_slider.value()
-        self.ui.image_view.setImage(self.state.volume[index])
-        self.ui.image_view.setImage(self.state.volume[index])
+        self.ui.image_item.setImage(self.state.volume[index])
+        self.ui.image_item.setImage(self.state.volume[index])
+        # Update the slice index
+        self.ui.slice_label.setText(f'{index + 1} / {self.state.volume.shape[0]}')
 
     def refresh(self):
         # TODO some other updating operations

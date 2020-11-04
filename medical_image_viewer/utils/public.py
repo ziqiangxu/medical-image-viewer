@@ -6,7 +6,6 @@ Some public functions
 """
 import pydicom
 import numpy as np
-from matplotlib import cm
 
 
 def get_look_up_table():

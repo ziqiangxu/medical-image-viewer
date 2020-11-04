@@ -67,7 +67,7 @@ class MivImageView(QWidget):
 
     def _show_overlay(self, index):
         overlay = self.state.overlay
-        if overlay:
+        if overlay is not None:
             self.ui.image_item_overlay.setImage(overlay[index])
 
     def _image_item_clicked(self, event: MouseClickEvent):
@@ -82,6 +82,7 @@ class MivImageView(QWidget):
             self.pixelSelected.emit((index, x, y), value)
 
     def refresh(self):
+        # TODO what about overwrite update?
         self.ui.slice_slider.setRange(0, self.state.volume.shape[0] - 1)
         index = self.ui.slice_slider.value()
         self._show_current_slice(index)

@@ -52,6 +52,14 @@ class MainWindow(QWidget):
             return
         self.ui.text_result.setText(f'Running, seed: {seed}, threshold: {threshold}, shape: {volume.shape}')
 
+        # TODO do the task
+        fake_overlay = np.zeros(volume.shape)
+        fake_overlay[:, 100:200, 100:200] = 1
+        self.state.set_overlay(fake_overlay)
+
+        self.ui.image_viewer.refresh()
+        QMessageBox.information(self, '完成', f'定量计算已完成')
+
     @Slot()
     def _select_seed(self):
         self.ui.image_viewer.set_view_mode(ViewMode.PIXEL_SELECTION)

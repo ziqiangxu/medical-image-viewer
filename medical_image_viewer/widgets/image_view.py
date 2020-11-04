@@ -3,10 +3,10 @@ Author: Daryl.Xu
 E-mail: ziqiang_xu@qq.com
 """
 import logging
-from typing import List
 
 import numpy as np
 import pyqtgraph as pg
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QSlider, QLabel, QHBoxLayout
 from PySide2 import QtCore
 from pyqtgraph.GraphicsScene.mouseEvents import MouseClickEvent
@@ -21,7 +21,7 @@ class ViewMode:
 
 class MivImageView(QWidget):
     # signal
-    pixelSelected = QtCore.Signal(int, int, int, float)
+    pixelSelected = QtCore.Signal(tuple, float)
 
     def __init__(self, state: State):
         super().__init__()
@@ -46,8 +46,12 @@ class MivImageView(QWidget):
         """
         self._mode = mode
 
-    def _show_current_slice(self):
-        index = self.ui.slice_slider.value()
+    @Slot(int)
+    def _show_current_slice(self, index: int):
+        """
+        :param index: value of the slider
+        :return:
+        """
         self.ui.image_item.setImage(self.state.volume[index])
         self.ui.image_item.setImage(self.state.volume[index])
         # Update the slice index
@@ -61,12 +65,14 @@ class MivImageView(QWidget):
             logging.debug(f'the position: ({x}, {y})')
             value = self.state.volume[index][x, y]
             logging.debug(f'value of the clicked pixel: {value}')
-            self.pixelSelected.emit(index, x, y, value)
+            # The pixel's index and intensity of the pixel
+            self.pixelSelected.emit((index, x, y), value)
 
     def refresh(self):
         # TODO some other updating operations
         self.ui.slice_slider.setRange(0, self.state.volume.shape[0] - 1)
-        self._show_current_slice()
+        index = self.ui.slice_slider.value()
+        self._show_current_slice(index)
 
         # TODO remove the test code
         # pg.image(self.state.volume)

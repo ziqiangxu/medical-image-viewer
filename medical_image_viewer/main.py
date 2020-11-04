@@ -2,9 +2,10 @@
 Author: Daryl.Xu
 E-mail: ziqiang_xu@qq.com
 """
-from typing import List
+from typing import List, Tuple
 
 from PySide2 import QtWidgets
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog
 import numpy as np
 
@@ -22,17 +23,20 @@ class MainWindow(QWidget):
         # pg.show(np.random.random([4, 5, 6]))
         self.ui.file_action.triggered.connect(self.open_files)
         self.ui.btn_seed_select.clicked.connect(self._select_seed)
-        self.ui.image_viewer.pixelSelected.connect(self._pixel_selected)
 
         if files:
             self._load_dcm_files(files)
 
+    @Slot()
     def _select_seed(self):
         self.ui.image_viewer.set_view_mode(ViewMode.PIXEL_SELECTION)
+        self.ui.image_viewer.pixelSelected.connect(self._pixel_selected)
 
-    def _pixel_selected(self, index, x, y, value):
+    @Slot(tuple, float)
+    def _pixel_selected(self, pos: Tuple[int, int, int], value):
+        index, x, y = pos
         self.ui.input_seed.setText(f'({index}, {x}, {y}), {value}')
-        # self.disconnect(MivImageView.pixel, self)
+        self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)
 
     def _display_images(self, volume: np.ndarray, files: List[str]):
         self.state.set_volume(volume, files)
@@ -53,6 +57,7 @@ class MainWindow(QWidget):
             # TODO show error box
             pass
 
+    @Slot()
     def open_files(self):
         """
         This is the test function,

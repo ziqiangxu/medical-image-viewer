@@ -15,8 +15,9 @@ class State:
     def __init__(self):
         self.name = 'state'
         self._dcm_files: List[str] = []
-        self._volume = None
-        self._seed = None
+        self._volume: np.ndarray = None
+        self._overlay: np.ndarray = None
+        self._seed: Tuple[int, int, int] = None
 
     @property
     def dcm_files(self):
@@ -46,3 +47,16 @@ class State:
         assert volume.ndim == 3 and volume.shape[0] == len(dcm_files)
         self._volume = volume
         self._dcm_files = dcm_files
+
+    @property
+    def overlay(self):
+        # TODO add a decorator for every property to sure the value not be a None object
+        return self._overlay
+
+    def set_overlay(self, overlay: np.ndarray):
+        """
+        :param overlay:
+        :return:
+        """
+        assert overlay.shape == self.volume.shape
+        self._overlay = overlay

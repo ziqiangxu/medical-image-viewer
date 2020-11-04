@@ -7,12 +7,13 @@ from enum import Enum, unique
 
 import numpy as np
 import pyqtgraph as pg
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Slot, QRect
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QSlider, QLabel, QHBoxLayout
 from PySide2 import QtCore
 from pyqtgraph.GraphicsScene.mouseEvents import MouseClickEvent
 
 from store import State
+from utils import public
 
 
 @unique
@@ -55,8 +56,19 @@ class MivImageView(QWidget):
         """
         self.ui.image_item.setImage(self.state.volume[index])
         self.ui.image_item.setImage(self.state.volume[index])
+
+        self._show_overlay(index)
+
         # Update the slice index
         self.ui.slice_label.setText(f'{index + 1} / {self.state.volume.shape[0]}')
+
+    def _add_overlay(self, overlay: np.ndarray):
+        self.state.set_overlay(overlay)
+
+    def _show_overlay(self, index):
+        overlay = self.state.overlay
+        if overlay:
+            self.ui.image_item_overlay.setImage(overlay[index])
 
     def _image_item_clicked(self, event: MouseClickEvent):
         if self._mode == ViewMode.PIXEL_SELECTION:
@@ -70,13 +82,9 @@ class MivImageView(QWidget):
             self.pixelSelected.emit((index, x, y), value)
 
     def refresh(self):
-        # TODO some other updating operations
         self.ui.slice_slider.setRange(0, self.state.volume.shape[0] - 1)
         index = self.ui.slice_slider.value()
         self._show_current_slice(index)
-
-        # TODO remove the test code
-        # pg.image(self.state.volume)
 
     def show_random_image(self):
         img = np.random.random((60, 60, 60))
@@ -88,11 +96,16 @@ class UiForm:
         self.root_layout = QVBoxLayout()
 
         self.graphic_view = pg.GraphicsView()  # 被改写过的QGraphicView
-        self.view_box = pg.ViewBox()  # 用于盛放图像控件，支持缩放功能
+        self.view_box = pg.ViewBox(invertY=True)  # 用于盛放图像控件，支持缩放功能
+        self.view_box.setBackgroundColor([0, 0, 200])
         self.graphic_view.setCentralItem(self.view_box)
 
         self.image_item = pg.ImageItem()  # 显示图像的控件
         self.view_box.addItem(self.image_item)
+        self.image_item_overlay = pg.ImageItem()
+        self.image_item_overlay.setLookupTable(public.get_look_up_table())  # 配置overlay控件的颜色查找表
+        self.view_box.addItem(self.image_item_overlay)
+
         # self.graphic_view.addItem(self.image_item)
 
         self.text_top_right = pg.TextItem()
@@ -122,7 +135,7 @@ if __name__ == '__main__':
     app = QApplication()
 
     dcm = pydicom.dcmread('../data/dicom/1_2_8001.DCM', force=True)
-    # file_meta没有内容，但是我们需要其中的TranserSyntaxUID字段，没有则设置默认小端
+    # file_meta没有内容，但是我们需要其中的TransferSyntaxUID字段，没有则设置默认小端
     if not dcm.file_meta.get('TransferSyntaxUID'):
         dcm.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
     arr = dcm.pixel_array

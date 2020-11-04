@@ -3,7 +3,7 @@ Author: Daryl.Xu
 E-mail: ziqiang_xu@qq.com
 """
 import os
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -16,11 +16,20 @@ class State:
         self.name = 'state'
         self._dcm_files: List[str] = []
         self._volume = None
+        self._seed = None
 
     @property
     def dcm_files(self):
         assert self._dcm_files
         return self._dcm_files
+
+    @property
+    def seed(self):
+        assert self._seed is not None
+        return self._seed
+
+    def set_seed(self, seed: Tuple[int, int, int]):
+        self._seed = seed
 
     @property
     def volume(self):

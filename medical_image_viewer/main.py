@@ -2,11 +2,13 @@
 Author: Daryl.Xu
 E-mail: ziqiang_xu@qq.com
 """
+import logging
 from typing import List, Tuple
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog
+from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog, QTextBrowser, \
+    QMessageBox
 import numpy as np
 
 from store import State
@@ -23,9 +25,32 @@ class MainWindow(QWidget):
         # pg.show(np.random.random([4, 5, 6]))
         self.ui.file_action.triggered.connect(self.open_files)
         self.ui.btn_seed_select.clicked.connect(self._select_seed)
+        self.ui.btn_run.clicked.connect(self._run)
 
         if files:
             self._load_dcm_files(files)
+
+    @property
+    def threshold(self):
+        text = self.ui.input_threshold.text()
+        threshold = 0
+        if text:
+            threshold = float(text)
+        else:
+            self.ui.input_threshold.setText('0.0')
+        return threshold
+
+    @Slot()
+    def _run(self):
+        try:
+            threshold = self.threshold
+            seed = self.state.seed
+            volume = self.state.volume
+            logging.info(f'{threshold}, {seed}, volume shape: {volume.shape}')
+        except AssertionError as e:
+            QMessageBox.warning(self, '警告', f'请检查种子点、分割阈值以及是否成功加载图像。{e}')
+            return
+        self.ui.text_result.setText(f'Running, seed: {seed}, threshold: {threshold}, shape: {volume.shape}')
 
     @Slot()
     def _select_seed(self):
@@ -35,7 +60,10 @@ class MainWindow(QWidget):
     @Slot(tuple, float)
     def _pixel_selected(self, pos: Tuple[int, int, int], value):
         index, x, y = pos
+
+        self.state.set_seed(pos)
         self.ui.input_seed.setText(f'({index}, {x}, {y}), {value}')
+
         self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)
 
     def _display_images(self, volume: np.ndarray, files: List[str]):
@@ -81,29 +109,48 @@ class UiForm:
         # 操作按钮
         self.btn_seed_select = QPushButton('选择种子点')
         self.input_seed = QLineEdit()
+        self.input_threshold = QLineEdit('1200.0')
+        self.btn_run = QPushButton('运行')
+        self.text_result = QTextBrowser()
 
         self.root_layout = QtWidgets.QVBoxLayout()
         self.main_layout = QtWidgets.QHBoxLayout()
-        self.left_layout = QtWidgets.QFormLayout()
-        self.left_layout.addRow(self.btn_seed_select, self.input_seed)
-        self.left_layout.addRow(QPushButton('生长阈值'), QLineEdit())
+        self.left_layout = QtWidgets.QVBoxLayout()
+        self.left_form = QtWidgets.QFormLayout()
+        self.left_result = QtWidgets.QVBoxLayout()
+        self.right_layout = QtWidgets.QVBoxLayout()
+
+        self.left_form.addRow(self.btn_seed_select, self.input_seed)
+        self.left_form.addRow('生长阈值', self.input_threshold)
 
         self.image_viewer = MivImageView(form.state)
 
-        self.right_layout = QtWidgets.QVBoxLayout()
-        self.right_layout.addWidget(self.image_viewer)
-
         self.root_layout.addWidget(self.menu_bar)
-        self.main_layout.addLayout(self.left_layout, 2)
+        self.right_layout.addWidget(self.image_viewer)
+        self.left_result.addWidget(self.btn_run)
+        self.left_result.addWidget(self.text_result)
+
+        self.main_layout.addLayout(self.left_layout, 3)
+        self.left_layout.addLayout(self.left_form)
+        self.left_layout.addLayout(self.left_result)
         self.main_layout.addLayout(self.right_layout, 6)
         self.root_layout.addLayout(self.main_layout)
         form.setLayout(self.root_layout)
+
+
+def config_log():
+    logging.basicConfig(level=logging.DEBUG,
+                        # filename="debug.log",
+                        format="%(asctime)s %(filename)s %(lineno)s %(levelname)s %(message)s",
+                        datefmt="%H:%M:%S",
+                        filemode="w")
 
 
 if __name__ == '__main__':
     import sys
     import os
 
+    config_log()
     app = QtWidgets.QApplication([])
 
     dcm_files = []

@@ -3,6 +3,7 @@ Author: Daryl.Xu
 E-mail: ziqiang_xu@qq.com
 """
 import logging
+from enum import Enum, unique
 
 import numpy as np
 import pyqtgraph as pg
@@ -14,7 +15,8 @@ from pyqtgraph.GraphicsScene.mouseEvents import MouseClickEvent
 from store import State
 
 
-class ViewMode:
+@unique
+class ViewMode(Enum):
     VIEW = 0
     PIXEL_SELECTION = 1
 
@@ -37,9 +39,8 @@ class MivImageView(QWidget):
     def view_mode(self):
         return self._mode
 
-    def set_view_mode(self, mode: int):
+    def set_view_mode(self, mode: ViewMode):
         """
-        TODO write ViewMode as Enum
         the mode can be ViewMode
         :param mode:
         :return:

@@ -13,7 +13,7 @@ class DcmLoadingException(Exception):
         super(DcmLoadingException, self).__init__(args, kwargs)
 
 
-def get_in_stack_position_number(path: str):
+def get_slice_location(path: str):
     """
     Get stack position from the number
     :param path:
@@ -21,7 +21,8 @@ def get_in_stack_position_number(path: str):
     """
 
     dcm = pydicom.dcmread(path, force=True)
-    return dcm.InStackPositionNumber
+    # return dcm.InStackPositionNumber
+    return dcm.SliceLocation
 
 
 def load_dcm_series(files: List[str]):
@@ -31,7 +32,7 @@ def load_dcm_series(files: List[str]):
     :return:
     """
     volume = []
-    files.sort(key=get_in_stack_position_number)
+    files.sort(key=get_slice_location)
     for file in files:
         dcm = pydicom.dcmread(file, force=True)
         if not dcm.file_meta.get('TransferSyntaxUID'):

@@ -10,6 +10,7 @@ pyside2 = "*"
 pyqtgraph = "*"
 pydicom = "*"
 numpy = "*"
+lymphangioma-segmentation = {editable = true, path = "./lymphangioma-segmentation"}
 
 [requires]
 python_version = "3.8"

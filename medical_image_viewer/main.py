@@ -14,6 +14,8 @@ import numpy as np
 from store import State
 from widgets.image_view import MivImageView, ViewMode
 from utils import dicom
+from lymphangioma_segmentation import segmentation
+from lymphangioma_segmentation.image import Pixel
 
 
 class MainWindow(QWidget):
@@ -52,10 +54,10 @@ class MainWindow(QWidget):
             return
         self.ui.text_result.setText(f'Running, seed: {seed}, threshold: {threshold}, shape: {volume.shape}')
 
-        # TODO do the task
-        fake_overlay = np.zeros(volume.shape)
-        fake_overlay[:, 100:200, 100:200] = 1
-        self.state.set_overlay(fake_overlay)
+        seed = self.state.seed
+        # 注意seed和Pixel对象的坐标顺序
+        overlay = segmentation.region_grow_3d(volume, Pixel(seed[1], seed[2], seed[0]), self.threshold)
+        self.state.set_overlay(overlay)
 
         self.ui.image_viewer.refresh()
         QMessageBox.information(self, '完成', f'定量计算已完成')

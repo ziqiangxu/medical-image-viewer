@@ -13,7 +13,7 @@ class DcmLoadingException(Exception):
         super(DcmLoadingException, self).__init__(args, kwargs)
 
 
-def get_slice_location(path: str):
+def get_slice_location(path: str) -> float:
     """
     Get stack position from the number
     :param path:
@@ -22,7 +22,7 @@ def get_slice_location(path: str):
 
     dcm = pydicom.dcmread(path, force=True)
     # return dcm.InStackPositionNumber
-    return dcm.SliceLocation
+    return float(dcm.SliceLocation)
 
 
 def load_dcm_series(files: List[str]):
@@ -39,3 +39,17 @@ def load_dcm_series(files: List[str]):
             dcm.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
         volume.append(dcm.pixel_array)
     return files, np.stack(volume)
+
+
+def get_voxel_size(path: str) -> float:
+    """
+    Get the voxel size of the DICOM file
+    :param path:
+    :return:
+    """
+    dcm = pydicom.dcmread(path, force=True)
+    x_str, y_str = dcm.PixelSpacing
+    x = float(x_str)
+    y = float(y_str)
+    z = float(dcm.SpacingBetweenSlices)
+    return x * y * z

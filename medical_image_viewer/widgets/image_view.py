@@ -98,7 +98,7 @@ class UiForm:
 
         self.graphic_view = pg.GraphicsView()  # 被改写过的QGraphicView
         self.view_box = pg.ViewBox(invertY=True)  # 用于盛放图像控件，支持缩放功能
-        self.view_box.setBackgroundColor([0, 0, 200])
+        self.view_box.setBackgroundColor([80, 80, 80])
         self.graphic_view.setCentralItem(self.view_box)
 
         self.image_item = pg.ImageItem()  # 显示图像的控件
@@ -110,7 +110,7 @@ class UiForm:
         # self.graphic_view.addItem(self.image_item)
 
         self.text_top_right = pg.TextItem()
-        self.text_top_right.setText('the text item')
+        self.text_top_right.setText('')
         self.graphic_view.addItem(self.text_top_right)
 
         # Qt的相关控件

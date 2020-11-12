@@ -46,21 +46,32 @@ class MainWindow(QWidget):
     def _run(self):
         try:
             threshold = self.threshold
-            seed = self.state.seed
+            seed_ = self.state.seed
+            # convert the coordinate to a Pixel object
+            seed = Pixel(seed_[1], seed_[2], seed_[0])
             volume = self.state.volume
-            logging.info(f'{threshold}, {seed}, volume shape: {volume.shape}')
+            logging.info(f'{threshold}, {seed_}, volume shape: {volume.shape}')
         except AssertionError as e:
             QMessageBox.warning(self, '警告', f'请检查种子点、分割阈值以及是否成功加载图像。{e}')
             return
-        self.ui.text_result.setText(f'Running, seed: {seed}, threshold: {threshold}, shape: {volume.shape}')
+        self.ui.text_result.setText(f'Running, seed: {seed_}, threshold: {threshold}, shape: {volume.shape}')
 
-        seed = self.state.seed
         # 注意seed和Pixel对象的坐标顺序
-        overlay = segmentation.region_grow_3d(volume, Pixel(seed[1], seed[2], seed[0]), self.threshold)
+        overlay = segmentation.region_grow_3d(volume, seed, self.threshold)
         self.state.set_overlay(overlay)
 
         self.ui.image_viewer.refresh()
         QMessageBox.information(self, '完成', f'定量计算已完成')
+
+        # Display the result in the text_result(QTextBrowser)
+        num = overlay.sum()
+        # TODO sure every slice has the same thickness and spacing
+        voxel_size = dicom.get_voxel_size(self.state.dcm_files[0])
+        result_text = f'分割已结束\n' \
+                      f'种子点：{seed}\n' \
+                      f'阈值：{threshold}\n' \
+                      f'体积：{num * voxel_size / 1000 : .2f}cm3'
+        self.ui.text_result.setText(result_text)
 
     @Slot()
     def _select_seed(self):

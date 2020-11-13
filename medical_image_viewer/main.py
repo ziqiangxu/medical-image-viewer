@@ -12,6 +12,7 @@ from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, 
 import numpy as np
 
 from store import State
+from widgets.histogram_lut import MivHistogramLUTWidget
 from widgets.image_view import MivImageView, ViewMode
 from utils import dicom
 from lymphangioma_segmentation import segmentation
@@ -145,6 +146,7 @@ class UiForm:
         self.left_form.addRow('生长阈值', self.input_threshold)
 
         self.image_viewer = MivImageView(form.state)
+        self.histogram_LUT = MivHistogramLUTWidget(self.image_viewer.ui.image_item)
 
         self.root_layout.addWidget(self.menu_bar)
         self.right_layout.addWidget(self.image_viewer)
@@ -155,6 +157,7 @@ class UiForm:
         self.left_layout.addLayout(self.left_form)
         self.left_layout.addLayout(self.left_result)
         self.main_layout.addLayout(self.right_layout, 6)
+        self.main_layout.addWidget(self.histogram_LUT, 1)
         self.root_layout.addLayout(self.main_layout)
         form.setLayout(self.root_layout)
 

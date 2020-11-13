@@ -103,6 +103,7 @@ class UiForm:
 
         self.image_item = pg.ImageItem()  # 显示图像的控件
         self.view_box.addItem(self.image_item)
+
         self.image_item_overlay = pg.ImageItem()
         self.image_item_overlay.setLookupTable(public.get_look_up_table())  # 配置overlay控件的颜色查找表
         self.view_box.addItem(self.image_item_overlay)

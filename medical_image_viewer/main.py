@@ -89,6 +89,10 @@ class MainWindow(QWidget):
         self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)
 
     def _display_images(self, volume: np.ndarray, files: List[str]):
+        # Clear the overlay
+        self.state.set_overlay(None)
+        self.ui.image_viewer.clear_overlay()
+
         self.state.set_volume(volume, files)
         self.ui.image_viewer.refresh()
 
@@ -101,7 +105,6 @@ class MainWindow(QWidget):
         try:
             files, volume = dicom.load_dcm_series(files)
             self._display_images(volume, files)
-            # TODO display the image in the image view
 
         except dicom.DcmLoadingException:
             # TODO show error box

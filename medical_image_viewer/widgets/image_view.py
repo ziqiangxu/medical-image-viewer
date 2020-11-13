@@ -70,6 +70,9 @@ class MivImageView(QWidget):
         if overlay is not None:
             self.ui.image_item_overlay.setImage(overlay[index])
 
+    def clear_overlay(self):
+        self.ui.image_item_overlay.clear()
+
     def _image_item_clicked(self, event: MouseClickEvent):
         if self._mode == ViewMode.PIXEL_SELECTION:
             index = self.ui.slice_slider.value()

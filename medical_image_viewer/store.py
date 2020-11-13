@@ -58,5 +58,6 @@ class State:
         :param overlay:
         :return:
         """
-        assert overlay.shape == self.volume.shape
+        if overlay is not None:
+            assert overlay.shape == self.volume.shape
         self._overlay = overlay

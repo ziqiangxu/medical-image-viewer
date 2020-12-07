@@ -43,13 +43,17 @@ class MainWindow(QWidget):
             self.ui.input_threshold.setText('0.0')
         return threshold
 
+    @staticmethod
+    def _create_seed_pixel(seed: Tuple[int, int, int]):
+        return Pixel(seed[1], seed[2], seed[0])
+
     @Slot()
     def _run(self):
         try:
             threshold = self.threshold
             seed_ = self.state.seed
             # convert the coordinate to a Pixel object
-            seed = Pixel(seed_[1], seed_[2], seed_[0])
+            seed = self._create_seed_pixel(seed_)
             volume = self.state.volume
             logging.info(f'{threshold}, {seed_}, volume shape: {volume.shape}')
         except AssertionError as e:
@@ -86,6 +90,22 @@ class MainWindow(QWidget):
         self.state.set_seed(pos)
         self.ui.input_seed.setText(f'({index}, {x}, {y}), {value}')
 
+        # compute the threshold
+        seed_pixel = self._create_seed_pixel(self.state.seed)
+        volume = self.state.volume
+
+        def get_reference_intensity():
+            neighbors = seed_pixel.get_26_neighborhood_3d(volume)
+            value_arr = []
+            for s in neighbors:
+                value_arr.append(s.get_pixel_3d(volume))
+            return np.array(value_arr).mean()
+
+        reference_intensity = get_reference_intensity()
+        slice_ = seed_pixel.get_slice(volume)
+        threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
+        self.ui.input_threshold.setText(f'{threshold:.1f}')
+
         self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)
 
     def _display_images(self, volume: np.ndarray, files: List[str]):
@@ -104,6 +124,7 @@ class MainWindow(QWidget):
         """
         try:
             files, volume = dicom.load_dcm_series(files)
+            # np.save('test2.npy', volume)
             self._display_images(volume, files)
 
         except dicom.DcmLoadingException:

@@ -62,7 +62,10 @@ class MainWindow(QWidget):
         self.ui.text_result.setText(f'Running, seed: {seed_}, threshold: {threshold}, shape: {volume.shape}')
 
         # 注意seed和Pixel对象的坐标顺序
-        overlay = segmentation.region_grow_3d(volume, seed, self.threshold)
+
+        overlay = segmentation.region_grow_3d(volume, seed, threshold)
+        # overlay, _, _ = segmentation.grow_by_every_slice(seed, volume)
+
         self.state.set_overlay(overlay)
 
         self.ui.image_viewer.refresh()
@@ -101,9 +104,13 @@ class MainWindow(QWidget):
                 value_arr.append(s.get_pixel_3d(volume))
             return np.array(value_arr).mean()
 
-        reference_intensity = get_reference_intensity()
-        slice_ = seed_pixel.get_slice(volume)
-        threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
+        # reference_intensity = get_reference_intensity()
+        # slice_ = seed_pixel.get_slice(volume)
+        # threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
+
+        _, threshold, std = segmentation.grow_by_every_slice(seed_pixel, volume)
+        threshold = threshold - std * 1.5
+
         self.ui.input_threshold.setText(f'{threshold:.1f}')
 
         self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)

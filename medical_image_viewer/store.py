@@ -18,6 +18,18 @@ class State:
         self._volume: np.ndarray = None
         self._overlay: np.ndarray = None
         self._seed: Tuple[int, int, int] = None
+        self._voxel_size = 0
+
+    @property
+    def voxel_size(self):
+        assert self._voxel_size != 0
+        return self._voxel_size
+
+    def set_voxel_size(self, size: float):
+        assert size > 0
+        self._voxel_size = size
+        # TODO 移除本行代码
+        raise BaseException('暂时不将本属性存储在store中')
 
     @property
     def dcm_files(self):

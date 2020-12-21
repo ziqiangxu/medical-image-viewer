@@ -8,7 +8,7 @@ from typing import List, Tuple
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog, QTextBrowser, \
-    QMessageBox
+    QMessageBox, QLabel
 import numpy as np
 
 from store import State
@@ -31,7 +31,7 @@ class MainWindow(QWidget):
         self.ui.btn_run.clicked.connect(self._run)
 
         if files:
-            self._load_dcm_files(files)
+            self._load_files(files)
 
     @property
     def threshold(self):
@@ -69,15 +69,16 @@ class MainWindow(QWidget):
         self.state.set_overlay(overlay)
 
         self.ui.image_viewer.refresh()
-        QMessageBox.information(self, '完成', f'定量计算已完成')
+        # QMessageBox.information(self, '完成', f'定量计算已完成')
 
         # Display the result in the text_result(QTextBrowser)
         num = overlay.sum()
         # TODO sure every slice has the same thickness and spacing
-        voxel_size = dicom.get_voxel_size(self.state.dcm_files[0])
+        voxel_size = float(self.ui.input_voxel_size.text())
         result_text = f'分割已结束\n' \
                       f'种子点：{seed}\n' \
                       f'阈值：{threshold}\n' \
+                      f'体素数目: {num / 1000:.2f}k\n' \
                       f'体积：{num * voxel_size / 1000 : .2f}cm3'
         self.ui.text_result.setText(result_text)
 
@@ -108,8 +109,10 @@ class MainWindow(QWidget):
         # slice_ = seed_pixel.get_slice(volume)
         # threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
 
-        _, threshold, std = segmentation.grow_by_every_slice(seed_pixel, volume)
-        threshold = threshold - std * 1.5
+        _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
+        # threshold = mean - std * 1.5
+        threshold = mean - std
+        # threshold = mean
 
         self.ui.input_threshold.setText(f'{threshold:.1f}')
 
@@ -117,21 +120,27 @@ class MainWindow(QWidget):
 
     def _display_images(self, volume: np.ndarray, files: List[str]):
         # Clear the overlay
-        self.state.set_overlay(None)
         self.ui.image_viewer.clear_overlay()
 
-        self.state.set_volume(volume, files)
         self.ui.image_viewer.refresh()
 
-    def _load_dcm_files(self, files: List[str]):
+    def _load_files(self, files: List[str]):
         """
         Load DICOM files
         :param files:
         :return:
         """
+        state = self.state
         try:
             files, volume = dicom.load_dcm_series(files)
             # np.save('test2.npy', volume)
+            voxel_size = dicom.get_voxel_size(files[0])
+            # state.set_voxel_size(voxel_size)
+            self.ui.input_voxel_size.setText(str(state.voxel_size))
+
+            state.set_overlay(None)
+            state.set_volume(volume, files)
+
             self._display_images(volume, files)
 
         except dicom.DcmLoadingException:
@@ -146,7 +155,7 @@ class MainWindow(QWidget):
         """
         files, _ = QFileDialog.getOpenFileNames()
         if files:
-            self._load_dcm_files(files)
+            self._load_files(files)
 
 
 class UiForm:
@@ -159,13 +168,7 @@ class UiForm:
         # menu = QMenu('文件')
         self.menu_file.addAction(self.file_action)
 
-        # 操作按钮
-        self.btn_seed_select = QPushButton('选择种子点')
-        self.input_seed = QLineEdit()
-        self.input_threshold = QLineEdit('1200.0')
-        self.btn_run = QPushButton('运行')
-        self.text_result = QTextBrowser()
-
+        #
         self.root_layout = QtWidgets.QVBoxLayout()
         self.main_layout = QtWidgets.QHBoxLayout()
         self.left_layout = QtWidgets.QVBoxLayout()
@@ -173,15 +176,31 @@ class UiForm:
         self.left_result = QtWidgets.QVBoxLayout()
         self.right_layout = QtWidgets.QVBoxLayout()
 
+        # 操作按钮
+        self.btn_seed_select = QPushButton('选择种子点')
+        self.input_seed = QLineEdit()
+        self.input_seed.setDisabled(True)
+
+        self.input_threshold = QLineEdit('')
+        self.input_threshold.setPlaceholderText('')
+
+        self.input_voxel_size = QLineEdit('')
+        self.btn_run = QPushButton('运行')
+        self.text_result = QTextBrowser()
+
+        #
         self.left_form.addRow(self.btn_seed_select, self.input_seed)
         self.left_form.addRow('生长阈值', self.input_threshold)
+        self.left_form.addRow('体素尺寸(mm3)', self.input_voxel_size)
 
+        #
         self.image_viewer = MivImageView(form.state)
         self.histogram_LUT = MivHistogramLUTWidget(self.image_viewer.ui.image_item)
 
         self.root_layout.addWidget(self.menu_bar)
         self.right_layout.addWidget(self.image_viewer)
         self.left_result.addWidget(self.btn_run)
+        self.left_result.addWidget(QLabel('计算结果'))
         self.left_result.addWidget(self.text_result)
 
         self.main_layout.addLayout(self.left_layout, 3)
@@ -205,7 +224,7 @@ if __name__ == '__main__':
     import sys
     import os
 
-    config_log()
+    # config_log()
     app = QtWidgets.QApplication([])
 
     dcm_files = []

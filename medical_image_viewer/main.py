@@ -136,7 +136,7 @@ class MainWindow(QWidget):
             # np.save('test2.npy', volume)
             voxel_size = dicom.get_voxel_size(files[0])
             # state.set_voxel_size(voxel_size)
-            self.ui.input_voxel_size.setText(str(state.voxel_size))
+            self.ui.input_voxel_size.setText(str(voxel_size))
 
             state.set_overlay(None)
             state.set_volume(volume, files)

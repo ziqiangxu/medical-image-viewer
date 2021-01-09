@@ -1,4 +1,6 @@
-.npy
+*.npy
+data
+data_
 
 # pycharm
 .idea

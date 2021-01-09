@@ -1,6 +1,5 @@
 """
-Author: Daryl.Xu
-E-mail: ziqiang_xu@qq.com
+@Author: Daryl.Xu <ziqiang_xu@qq.com>
 """
 import logging
 from typing import List, Tuple
@@ -63,8 +62,8 @@ class MainWindow(QWidget):
 
         # 注意seed和Pixel对象的坐标顺序
 
-        overlay = segmentation.region_grow_3d(volume, seed, threshold)
-        # overlay, _, _ = segmentation.grow_by_every_slice(seed, volume)
+        # overlay = segmentation.region_grow_3d(volume, seed, threshold)
+        overlay, _, _ = segmentation.grow_by_every_slice(seed, volume, ratio=3, min_iter=5)
 
         self.state.set_overlay(overlay)
 
@@ -110,8 +109,8 @@ class MainWindow(QWidget):
         # threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
 
         _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
-        # threshold = mean - std * 1.5
-        threshold = mean - std
+        threshold = mean - std * 1.5
+        # threshold = mean - std
         # threshold = mean
 
         self.ui.input_threshold.setText(f'{threshold:.1f}')
@@ -236,7 +235,8 @@ if __name__ == '__main__':
 
     widget = MainWindow(files=dcm_files)
 
-    widget.resize(800, 600)
+    widget.resize(1000, 600)
+    widget.setWindowTitle('medical-image-viewer')
     widget.show()
 
     sys.exit(app.exec_())

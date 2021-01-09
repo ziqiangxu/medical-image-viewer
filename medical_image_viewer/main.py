@@ -9,13 +9,13 @@ from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog, QTextBrowser, \
     QMessageBox, QLabel
 import numpy as np
+from lymphangioma_segmentation import segmentation
+from lymphangioma_segmentation.image import Pixel
+from lymphangioma_segmentation import image
 
 from store import State
 from widgets.histogram_lut import MivHistogramLUTWidget
 from widgets.image_view import MivImageView, ViewMode
-from utils import dicom
-from lymphangioma_segmentation import segmentation
-from lymphangioma_segmentation.image import Pixel
 
 
 class MainWindow(QWidget):
@@ -130,21 +130,30 @@ class MainWindow(QWidget):
         :return:
         """
         state = self.state
-        try:
-            files, volume = dicom.load_dcm_series(files)
-            # np.save('test2.npy', volume)
-            voxel_size = dicom.get_voxel_size(files[0])
-            # state.set_voxel_size(voxel_size)
-            self.ui.input_voxel_size.setText(str(voxel_size))
 
-            state.set_overlay(None)
-            state.set_volume(volume, files)
+        test_file = files[0]
+        if test_file.endswith('.jpg'):
+            # If jpg files got
+            for file in files:
+                assert file.endswith('.jpg')
+            files, volume = image.load_jpg_series(files)
+            voxel_size = 0
+        else:
+            # or DCM files
+            try:
+                files, volume = image.load_dcm_series(files)
+                # np.save('test2.npy', volume)
+                voxel_size = image.get_voxel_size(files[0])
+            except image.DcmLoadingException:
+                # TODO show error box
+                return
 
-            self._display_images(volume, files)
+        # state.set_voxel_size(voxel_size)
+        self.ui.input_voxel_size.setText(str(voxel_size))
+        state.set_overlay(None)
+        state.set_volume(volume, files)
 
-        except dicom.DcmLoadingException:
-            # TODO show error box
-            pass
+        self._display_images(volume, files)
 
     @Slot()
     def open_files(self):

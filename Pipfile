@@ -11,6 +11,7 @@ pyqtgraph = "*"
 pydicom = "*"
 numpy = "*"
 lymphangioma-segmentation = {editable = true, path = "./lymphangioma-segmentation"}
+deprecated = "*"
 
 [requires]
 python_version = "3.8"

@@ -108,8 +108,10 @@ class MainWindow(QWidget):
         # slice_ = seed_pixel.get_slice(volume)
         # threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
 
-        _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
-        threshold = mean - std * 1.5
+        # _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
+        # threshold = mean - std * 1.5
+        threshold = 0
+
         # threshold = mean - std
         # threshold = mean
 

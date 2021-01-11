@@ -12,6 +12,7 @@ pydicom = "*"
 numpy = "*"
 lymphangioma-segmentation = {editable = true, path = "./lymphangioma-segmentation"}
 deprecated = "*"
+opencv-python = "==4.1.2.30"
 
 [requires]
 python_version = "3.8"

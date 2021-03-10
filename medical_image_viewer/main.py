@@ -3,11 +3,12 @@
 """
 import logging
 from typing import List, Tuple
+from enum import Enum
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog, QTextBrowser, \
-    QMessageBox, QLabel
+    QMessageBox, QLabel, QComboBox
 import numpy as np
 from lymphangioma_segmentation import segmentation
 from lymphangioma_segmentation.image import Pixel
@@ -16,6 +17,11 @@ from lymphangioma_segmentation import image
 from store import State
 from widgets.histogram_lut import MivHistogramLUTWidget
 from widgets.image_view import MivImageView, ViewMode
+
+
+class Algorithm(Enum):
+    BY_THRESHOLD = 'By threshold'
+    GROW_EVERY_SLICE = 'Grow every slice'
 
 
 class MainWindow(QWidget):
@@ -28,6 +34,7 @@ class MainWindow(QWidget):
         self.ui.file_action.triggered.connect(self.open_files)
         self.ui.btn_seed_select.clicked.connect(self._select_seed)
         self.ui.btn_run.clicked.connect(self._run)
+        self.ui.combo_algorithm.currentTextChanged.connect(self._algorithm_changed)
 
         if files:
             self._load_files(files)
@@ -46,24 +53,44 @@ class MainWindow(QWidget):
     def _create_seed_pixel(seed: Tuple[int, int, int]):
         return Pixel(seed[1], seed[2], seed[0])
 
+    def _set_algorithm_ui_mode(self, algorithm: Algorithm):
+        # About the switch mode, place the test value in the begin
+        if Algorithm.GROW_EVERY_SLICE == algorithm:
+            self.ui.input_threshold.setEnabled(False)
+        elif Algorithm.BY_THRESHOLD == algorithm:
+            self.ui.input_threshold.setEnabled(True)
+        else:
+            raise NotImplementedError
+
+    @Slot()
+    def _algorithm_changed(self):
+        algorithm = Algorithm(self.ui.combo_algorithm.currentText())
+        self._set_algorithm_ui_mode(algorithm)
+
     @Slot()
     def _run(self):
         try:
-            threshold = self.threshold
             seed_ = self.state.seed
             # convert the coordinate to a Pixel object
             seed = self._create_seed_pixel(seed_)
             volume = self.state.volume
-            logging.info(f'{threshold}, {seed_}, volume shape: {volume.shape}')
+            logging.info(f'{seed_}, volume shape: {volume.shape}')
         except AssertionError as e:
             QMessageBox.warning(self, '警告', f'请检查种子点、分割阈值以及是否成功加载图像。{e}')
             return
-        self.ui.text_result.setText(f'Running, seed: {seed_}, threshold: {threshold}, shape: {volume.shape}')
 
         # 注意seed和Pixel对象的坐标顺序
 
-        # overlay = segmentation.region_grow_3d(volume, seed, threshold)
-        overlay, _, _ = segmentation.grow_by_every_slice(seed, volume, ratio=3, min_iter=5)
+        algorithm = Algorithm(self.ui.combo_algorithm.currentText())
+        if Algorithm.GROW_EVERY_SLICE == algorithm:
+            overlay, _, _ = segmentation.grow_by_every_slice(seed, volume, ratio=3, min_iter=5)
+            self.ui.text_result.setText(f'Running, seed: {seed_}, shape: {volume.shape}')
+        elif Algorithm.BY_THRESHOLD == algorithm:
+            threshold = self.threshold
+            overlay = segmentation.region_grow_3d(volume, seed, threshold)
+            self.ui.text_result.setText(f'Running, seed: {seed_}, threshold: {threshold}, shape: {volume.shape}')
+        else:
+            raise NotImplementedError
 
         self.state.set_overlay(overlay)
 
@@ -76,7 +103,6 @@ class MainWindow(QWidget):
         voxel_size = float(self.ui.input_voxel_size.text())
         result_text = f'分割已结束\n' \
                       f'种子点：{seed}\n' \
-                      f'阈值：{threshold}\n' \
                       f'体素数目: {num / 1000:.2f}k\n' \
                       f'体积：{num * voxel_size / 1000 : .2f}cm3'
         self.ui.text_result.setText(result_text)
@@ -91,7 +117,7 @@ class MainWindow(QWidget):
         index, x, y = pos
 
         self.state.set_seed(pos)
-        self.ui.input_seed.setText(f'({index}, {x}, {y}), {value}')
+        self.ui.input_seed.setText(f'({index}, {x}, {y}), {value:.1f}')
 
         # compute the threshold
         seed_pixel = self._create_seed_pixel(self.state.seed)
@@ -104,18 +130,20 @@ class MainWindow(QWidget):
                 value_arr.append(s.get_pixel_3d(volume))
             return np.array(value_arr).mean()
 
-        # reference_intensity = get_reference_intensity()
-        # slice_ = seed_pixel.get_slice(volume)
-        # threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
+        algorithm = Algorithm(self.ui.combo_algorithm.currentText())
+        if Algorithm.BY_THRESHOLD == algorithm:
 
-        # _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
-        # threshold = mean - std * 1.5
-        threshold = 0
+            reference_intensity = get_reference_intensity()
+            slice_ = seed_pixel.get_slice(volume)
+            threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
 
-        # threshold = mean - std
-        # threshold = mean
+            _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
+            threshold = mean - std * 1.5
 
-        self.ui.input_threshold.setText(f'{threshold:.1f}')
+            # threshold = mean - std
+            # threshold = mean
+            self.ui.input_threshold.setText(f'{threshold:.1f}')
+        # elif algorithm == Algorithm.GROW_EVERY_SLICE:
 
         self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)
 
@@ -191,6 +219,9 @@ class UiForm:
         self.input_seed = QLineEdit()
         self.input_seed.setDisabled(True)
 
+        self.combo_algorithm = QComboBox()
+        self.combo_algorithm.addItems([item.value for item in Algorithm.__members__.values()])
+
         self.input_threshold = QLineEdit('')
         self.input_threshold.setPlaceholderText('')
 
@@ -200,6 +231,7 @@ class UiForm:
 
         #
         self.left_form.addRow(self.btn_seed_select, self.input_seed)
+        self.left_form.addRow('algorithm', self.combo_algorithm)
         self.left_form.addRow('生长阈值', self.input_threshold)
         self.left_form.addRow('体素尺寸(mm3)', self.input_voxel_size)
 

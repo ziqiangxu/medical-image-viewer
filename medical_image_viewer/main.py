@@ -3,7 +3,6 @@
 """
 import logging
 from typing import List, Tuple
-from enum import Enum
 
 from PySide2 import QtWidgets
 from PySide2.QtCore import Slot
@@ -14,14 +13,10 @@ from lymphangioma_segmentation import segmentation
 from lymphangioma_segmentation.image import Pixel
 from lymphangioma_segmentation import image
 
+from constant import Algorithm
 from store import State
 from widgets.histogram_lut import MivHistogramLUTWidget
 from widgets.image_view import MivImageView, ViewMode
-
-
-class Algorithm(Enum):
-    BY_THRESHOLD = 'By threshold'
-    GROW_EVERY_SLICE = 'Grow every slice'
 
 
 class MainWindow(QWidget):
@@ -31,9 +26,13 @@ class MainWindow(QWidget):
         self.ui = UiForm(self)
 
         # pg.show(np.random.random([4, 5, 6]))
-        self.ui.file_action.triggered.connect(self.open_files)
+        self.ui.action_file_open.triggered.connect(self.open_files)
         self.ui.btn_seed_select.clicked.connect(self._select_seed)
         self.ui.btn_run.clicked.connect(self._run)
+        self.ui.btn_fine_tune.clicked.connect(self._fine_tune_clicked)
+        self.ui.btn_erase.clicked.connect(self._btn_erase_clicked)
+        self.ui.btn_fine_seg.clicked.connect(self._btn_fine_seg)
+        self.ui.btn_test.clicked.connect(self._test_clicked)
         self.ui.combo_algorithm.currentTextChanged.connect(self._algorithm_changed)
 
         if files:
@@ -49,6 +48,10 @@ class MainWindow(QWidget):
             self.ui.input_threshold.setText('0.0')
         return threshold
 
+    @property
+    def algorithm(self):
+        return Algorithm(self.ui.combo_algorithm.currentText())
+
     @staticmethod
     def _create_seed_pixel(seed: Tuple[int, int, int]):
         return Pixel(seed[1], seed[2], seed[0])
@@ -63,9 +66,27 @@ class MainWindow(QWidget):
             raise NotImplementedError
 
     @Slot()
+    def _btn_fine_seg(self):
+        self.ui.image_viewer.segment_roi(self.algorithm, self.threshold)
+
+    @Slot()
+    def _btn_erase_clicked(self):
+        self.ui.image_viewer.erase_roi()
+
+    @Slot()
     def _algorithm_changed(self):
         algorithm = Algorithm(self.ui.combo_algorithm.currentText())
         self._set_algorithm_ui_mode(algorithm)
+
+    @Slot()
+    def _test_clicked(self):
+        # TODO need to be commented
+        pass
+
+    @Slot()
+    def _fine_tune_clicked(self):
+        # TODO get ROI in the image_viewer
+        self.ui.image_viewer.set_view_mode(ViewMode.ROI_SELECTION)
 
     @Slot()
     def _run(self):
@@ -180,8 +201,8 @@ class MainWindow(QWidget):
 
         # state.set_voxel_size(voxel_size)
         self.ui.input_voxel_size.setText(str(voxel_size))
-        state.set_overlay(None)
         state.set_volume(volume, files)
+        state.set_overlay(np.zeros(volume.shape, np.int8))
 
         self._display_images(volume, files)
 
@@ -201,10 +222,14 @@ class UiForm:
         self.menu_bar = QMenuBar(form)
 
         self.menu_file = QMenu('文件')
+        self.menu_help = QMenu('帮助')
         self.menu_bar.addMenu(self.menu_file)
-        self.file_action = QAction('打开')
+        self.menu_bar.addMenu(self.menu_help)
+        self.action_file_open = QAction('打开')
+        self.action_help_about = QAction('关于')
         # menu = QMenu('文件')
-        self.menu_file.addAction(self.file_action)
+        self.menu_file.addAction(self.action_file_open)
+        self.menu_help.addAction(self.action_help_about)
 
         #
         self.root_layout = QtWidgets.QVBoxLayout()
@@ -213,6 +238,7 @@ class UiForm:
         self.left_form = QtWidgets.QFormLayout()
         self.left_result = QtWidgets.QVBoxLayout()
         self.right_layout = QtWidgets.QVBoxLayout()
+        self.fine_tune_layout = QtWidgets.QHBoxLayout()
 
         # 操作按钮
         self.btn_seed_select = QPushButton('选择种子点')
@@ -222,30 +248,43 @@ class UiForm:
         self.combo_algorithm = QComboBox()
         self.combo_algorithm.addItems([item.value for item in Algorithm.__members__.values()])
 
-        self.input_threshold = QLineEdit('')
+        self.input_threshold = QLineEdit('0')
         self.input_threshold.setPlaceholderText('')
 
         self.input_voxel_size = QLineEdit('')
         self.btn_run = QPushButton('运行')
+        self.btn_fine_tune = QPushButton('选择区域微调')
+        self.btn_erase = QPushButton('擦除')
+        self.btn_fine_seg = QPushButton('分割')
+        self.btn_test = QPushButton('测试')
         self.text_result = QTextBrowser()
-
-        #
-        self.left_form.addRow(self.btn_seed_select, self.input_seed)
-        self.left_form.addRow('algorithm', self.combo_algorithm)
-        self.left_form.addRow('生长阈值', self.input_threshold)
-        self.left_form.addRow('体素尺寸(mm3)', self.input_voxel_size)
 
         #
         self.image_viewer = MivImageView(form.state)
         self.histogram_LUT = MivHistogramLUTWidget(self.image_viewer.ui.image_item)
 
+        #
+        self.left_form.addRow('显示模式', self.image_viewer.ui.view_mode_selector)
+        self.left_form.addRow(self.btn_seed_select, self.input_seed)
+        self.left_form.addRow('分割算法', self.combo_algorithm)
+        self.left_form.addRow('生长阈值', self.input_threshold)
+        self.left_form.addRow('体素尺寸(mm3)', self.input_voxel_size)
+
         self.root_layout.addWidget(self.menu_bar)
         self.right_layout.addWidget(self.image_viewer)
         self.left_result.addWidget(self.btn_run)
+        self.left_result.addWidget(self.btn_fine_tune)
+
+        self.left_result.addLayout(self.fine_tune_layout)
+        self.fine_tune_layout.addWidget(self.btn_erase)
+        self.fine_tune_layout.addWidget(self.btn_fine_seg)
+
+        # 测试按钮
+        # self.left_result.addWidget(self.btn_test)
         self.left_result.addWidget(QLabel('计算结果'))
         self.left_result.addWidget(self.text_result)
 
-        self.main_layout.addLayout(self.left_layout, 3)
+        self.main_layout.addLayout(self.left_layout, 2)
         self.left_layout.addLayout(self.left_form)
         self.left_layout.addLayout(self.left_result)
         self.main_layout.addLayout(self.right_layout, 6)

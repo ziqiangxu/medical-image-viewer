@@ -6,6 +6,8 @@ from typing import List, Tuple
 
 import numpy as np
 
+from lymphangioma_segmentation.image import Pixel
+
 
 class State:
     """
@@ -72,3 +74,14 @@ class State:
         if overlay is not None:
             assert overlay.shape == self.volume.shape
         self._overlay = overlay
+
+    def update_overlay(self, position: Pixel, arr: np.ndarray):
+        """
+        更新overlay
+        update overlay
+        :param position: 要更新的位置(z, ) | where to update
+        :param arr: 更新的内容 | array to update
+        """
+        xl, yl = arr.shape
+        x_start, y_start = position.col, position.row
+        self.overlay[position.height, x_start: x_start + xl, y_start: y_start + yl] = arr

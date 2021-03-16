@@ -1,5 +1,5 @@
 """
-@Author: Daryl.Xu <ziqiang_xu@qq.com>
+@Author: Daryl Xu
 """
 import logging
 from typing import List, Tuple
@@ -17,6 +17,7 @@ from constant import Algorithm
 from store import State
 from widgets.histogram_lut import MivHistogramLUTWidget
 from widgets.image_view import MivImageView, ViewMode
+from window.about import AboutWindow
 
 
 class MainWindow(QWidget):
@@ -27,6 +28,7 @@ class MainWindow(QWidget):
 
         # pg.show(np.random.random([4, 5, 6]))
         self.ui.action_file_open.triggered.connect(self.open_files)
+        self.ui.action_help_about.triggered.connect(self._show_about)
         self.ui.btn_seed_select.clicked.connect(self._select_seed)
         self.ui.btn_run.clicked.connect(self._run)
         self.ui.btn_fine_tune.clicked.connect(self._fine_tune_clicked)
@@ -64,6 +66,10 @@ class MainWindow(QWidget):
             self.ui.input_threshold.setEnabled(True)
         else:
             raise NotImplementedError
+
+    @Slot()
+    def _show_about(self):
+        self._about = AboutWindow()
 
     @Slot()
     def _btn_fine_seg(self):

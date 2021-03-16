@@ -3,8 +3,8 @@ from enum import Enum, unique
 
 @unique
 class Algorithm(Enum):
-    BY_THRESHOLD = 'By threshold'
-    GROW_EVERY_SLICE = 'Grow every slice'
+    BY_THRESHOLD = '算法1'
+    GROW_EVERY_SLICE = '算法2'
 
 
 @unique

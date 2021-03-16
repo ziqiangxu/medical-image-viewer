@@ -181,7 +181,7 @@ class UiForm:
         self.slice_slider = QSlider(QtCore.Qt.Horizontal)
         self.slice_label = QLabel()
         self.view_mode_selector = QComboBox()
-        # self.view_mode_selector.setEnabled(False)
+        self.view_mode_selector.setEnabled(False)
         self.view_mode_selector.addItems([mode.value for mode in ViewMode.__members__.values()])
 
         # 布局相关

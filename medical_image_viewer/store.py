@@ -6,6 +6,8 @@ from enum import unique, Enum
 from typing import List, Tuple
 
 import numpy as np
+from PySide2 import QtCore
+from PySide2.QtCore import QObject
 
 from lymphangioma_segmentation.image import Pixel
 
@@ -18,11 +20,15 @@ class UpdateMode(Enum):
     APPEND = 1
 
 
-class State:
+class State(QObject):
     """
     共享
     """
-    def __init__(self):
+    # signals
+    overlayUpdated = QtCore.Signal()
+
+    def __init__(self, parent: QObject):
+        super().__init__(parent)
         self.name = 'state'
         self._dcm_files: List[str] = []
         self._volume: np.ndarray = None
@@ -103,3 +109,4 @@ class State:
         else:
             raise NotImplementedError
         self.overlay[position.height, x_start: x_end, y_start: y_end] = arr.astype(np.int8)
+        self.overlayUpdated.emit()

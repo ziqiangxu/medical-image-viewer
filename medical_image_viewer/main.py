@@ -23,7 +23,7 @@ from window.about import AboutWindow
 class MainWindow(QWidget):
     def __init__(self, files: List[str] = []):
         super().__init__()
-        self.state = State()
+        self.state = State(self)
         self.ui = UiForm(self)
 
         # pg.show(np.random.random([4, 5, 6]))
@@ -36,6 +36,7 @@ class MainWindow(QWidget):
         self.ui.btn_fine_seg.clicked.connect(self._btn_fine_seg)
         self.ui.btn_test.clicked.connect(self._test_clicked)
         self.ui.combo_algorithm.currentTextChanged.connect(self._algorithm_changed)
+        self.state.overlayUpdated.connect(self._overlay_updated)
 
         if files:
             self._load_files(files)
@@ -70,6 +71,21 @@ class MainWindow(QWidget):
     @Slot()
     def _show_about(self):
         self._about = AboutWindow()
+
+    @Slot()
+    def _overlay_updated(self):
+        """
+        Overlay updated, update the statistic data in the window
+        :return:
+        """
+        # Display the result in the text_result(QTextBrowser)
+        num = self.state.overlay.sum()
+        # TODO sure every slice has the same thickness and spacing
+        voxel_size = float(self.ui.input_voxel_size.text())
+        result_text = f'分割已结束\n' \
+                      f'体素数目: {num / 1000:.2f}k\n' \
+                      f'体积：{num * voxel_size / 1000 : .2f}cm3'
+        self.ui.text_result.setText(result_text)
 
     @Slot()
     def _btn_fine_seg(self):
@@ -123,16 +139,7 @@ class MainWindow(QWidget):
 
         self.ui.image_viewer.refresh()
         # QMessageBox.information(self, '完成', f'定量计算已完成')
-
-        # Display the result in the text_result(QTextBrowser)
-        num = overlay.sum()
-        # TODO sure every slice has the same thickness and spacing
-        voxel_size = float(self.ui.input_voxel_size.text())
-        result_text = f'分割已结束\n' \
-                      f'种子点：{seed}\n' \
-                      f'体素数目: {num / 1000:.2f}k\n' \
-                      f'体积：{num * voxel_size / 1000 : .2f}cm3'
-        self.ui.text_result.setText(result_text)
+        self._overlay_updated()
 
     @Slot()
     def _select_seed(self):

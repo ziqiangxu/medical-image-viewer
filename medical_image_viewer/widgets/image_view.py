@@ -14,7 +14,7 @@ from lymphangioma_segmentation.image import Pixel
 from lymphangioma_segmentation import segmentation as seg
 from pyqtgraph.GraphicsScene.mouseEvents import MouseClickEvent
 
-from store import State
+from store import State, UpdateMode
 from utils import public
 from constant import ViewMode, Algorithm
 
@@ -54,7 +54,7 @@ class MivImageView(QWidget):
             mask = seg.fine_tune_roi(roi_arr, self.state.volume, self.state.overlay)
         else:
             mask = seg.fine_tune_roi1(roi_arr, threshold)
-        self._update_mask_under_roi(mask)
+        self._update_mask_under_roi(mask, UpdateMode.APPEND)
 
     def erase_roi(self):
         if not self._check_roi():
@@ -62,13 +62,14 @@ class MivImageView(QWidget):
         w_, h_ = self.roi.size()
         w, h = int(math.ceil(w_)), int(math.ceil(h_))
         mask = np.zeros((int(w), int(h)), np.int8)
-        self._update_mask_under_roi(mask)
+        self._update_mask_under_roi(mask, UpdateMode.OVER_WRITE)
 
-    def _update_mask_under_roi(self, mask):
+    def _update_mask_under_roi(self, mask, update_mode: UpdateMode):
         """
         更新overlay ROI选中的区域
         Update the area in overlay where selected by ROI
         :param mask:
+        :param update_mode: update mode
         :return:
         """
         w_, h_ = self.roi.size()
@@ -76,7 +77,7 @@ class MivImageView(QWidget):
         assert mask.shape == (w, h)
         x, y = self.roi.pos()
         position = Pixel(int(y), int(x), self.ui.slice_slider.value())
-        self.state.update_overlay(position, mask)
+        self.state.update_overlay(position, mask, update_mode)
         self.refresh()
 
     def get_current_slice(self) -> ndarray:

@@ -1,9 +1,8 @@
 """
-@Author: Daryl.Xu <ziqiang_xu@qq.com>
+@Author: Daryl Xu
 """
 import logging
 import math
-from enum import Enum, unique
 
 import numpy as np
 from numpy import ndarray

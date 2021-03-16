@@ -1,5 +1,6 @@
 """
 @Author: Daryl Xu
+
 The about window
 """
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QTextBrowser, QDialog

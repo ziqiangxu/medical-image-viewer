@@ -4,10 +4,10 @@
 import logging
 from typing import List, Tuple
 
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtCore
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget, QLineEdit, QPushButton, QMenuBar, QMenu, QAction, QFileDialog, QTextBrowser, \
-    QMessageBox, QLabel, QComboBox
+    QMessageBox, QLabel, QComboBox, QSlider
 import numpy as np
 from lymphangioma_segmentation import segmentation
 from lymphangioma_segmentation.image import Pixel
@@ -36,6 +36,7 @@ class MainWindow(QWidget):
         self.ui.btn_fine_seg.clicked.connect(self._btn_fine_seg)
         self.ui.btn_test.clicked.connect(self._test_clicked)
         self.ui.combo_algorithm.currentTextChanged.connect(self._algorithm_changed)
+        self.ui.threshold_slider.valueChanged.connect(self.threshold_slider_value_changed)
         self.state.overlayUpdated.connect(self._overlay_updated)
 
         if files:
@@ -94,6 +95,10 @@ class MainWindow(QWidget):
     @Slot()
     def _btn_erase_clicked(self):
         self.ui.image_viewer.erase_roi()
+
+    @Slot(int)
+    def threshold_slider_value_changed(self, value: int):
+        self.ui.input_threshold.setText(str(value))
 
     @Slot()
     def _algorithm_changed(self):
@@ -177,7 +182,14 @@ class MainWindow(QWidget):
             # threshold = mean - std
             # threshold = mean
             self.ui.input_threshold.setText(f'{threshold:.1f}')
-        # elif algorithm == Algorithm.GROW_EVERY_SLICE:
+            self.ui.threshold_slider.setEnabled(True)
+            self.ui.threshold_slider.setRange(mean - 3 * std, mean + 3 * std)
+            self.ui.threshold_slider.setValue(threshold)
+        elif algorithm == Algorithm.GROW_EVERY_SLICE:
+            self.ui.threshold_slider.setEnabled(False)
+            pass
+        else:
+            raise NotImplementedError
 
         self.ui.image_viewer.pixelSelected.disconnect(self._pixel_selected)
 
@@ -263,8 +275,10 @@ class UiForm:
 
         self.input_threshold = QLineEdit('0')
         self.input_threshold.setPlaceholderText('')
-
         self.input_voxel_size = QLineEdit('')
+        self.threshold_slider = QSlider(QtCore.Qt.Horizontal)
+        self.threshold_slider.setEnabled(False)
+
         self.btn_run = QPushButton('运行')
         self.btn_fine_tune = QPushButton('选择区域微调')
         self.btn_erase = QPushButton('擦除')
@@ -280,11 +294,12 @@ class UiForm:
         self.left_form.addRow('显示模式', self.image_viewer.ui.view_mode_selector)
         self.left_form.addRow(self.btn_seed_select, self.input_seed)
         self.left_form.addRow('分割算法', self.combo_algorithm)
-        self.left_form.addRow('生长阈值', self.input_threshold)
         self.left_form.addRow('体素尺寸(mm3)', self.input_voxel_size)
+        self.left_form.addRow('生长阈值', self.input_threshold)
 
         self.root_layout.addWidget(self.menu_bar)
         self.right_layout.addWidget(self.image_viewer)
+        self.left_result.addWidget(self.threshold_slider)
         self.left_result.addWidget(self.btn_run)
         self.left_result.addWidget(self.btn_fine_tune)
 

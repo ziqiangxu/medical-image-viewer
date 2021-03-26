@@ -6,5 +6,5 @@ PyInstaller.__main__.run([
     '--onefile',
     '--windowed',
     # '-i path/to/icon.ico',
-    '-nmedical-image-viewer-1.0.0-beta.1'
+    '-nmedical-image-viewer-1.0.0-beta.2'
 ])

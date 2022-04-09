@@ -161,13 +161,15 @@ class MainWindow(QWidget):
         """
         state = self.state
 
-        test_file = files[0]
+        test_file = files[0].lower()
         if test_file.endswith('.jpg'):
             # If jpg files got
             for file in files:
                 assert file.endswith('.jpg')
             files, volume = image.load_jpg_series(files)
             voxel_size = 0
+        elif test_file.endswith('.nii') or test_file.endswith('.nii.gz'):
+           raise NotImplementedError
         else:
             # or DCM files
             try:

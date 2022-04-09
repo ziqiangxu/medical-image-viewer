@@ -1,5 +1,5 @@
 """
-@Author: Daryl.Xu <ziqiang_xu@qq.com>
+@Author: Daryl Xu
 
 Some public functions
 """

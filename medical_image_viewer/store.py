@@ -2,16 +2,33 @@
 @Author: Daryl.Xu <ziqiang_xu@qq.com>
 """
 import os
+from enum import unique, Enum
 from typing import List, Tuple
 
 import numpy as np
+from PySide2 import QtCore
+from PySide2.QtCore import QObject
+
+from lymphangioma_segmentation.image import Pixel
 
 
-class State:
+@unique
+class UpdateMode(Enum):
+    # 覆盖
+    OVER_WRITE = 0
+    # 新增
+    APPEND = 1
+
+
+class State(QObject):
     """
     共享
     """
-    def __init__(self):
+    # signals
+    overlayUpdated = QtCore.Signal()
+
+    def __init__(self, parent: QObject):
+        super().__init__(parent)
         self.name = 'state'
         self._dcm_files: List[str] = []
         self._volume: np.ndarray = None
@@ -72,3 +89,24 @@ class State:
         if overlay is not None:
             assert overlay.shape == self.volume.shape
         self._overlay = overlay
+
+    def update_overlay(self, position: Pixel, arr: np.ndarray, mode: UpdateMode):
+        """
+        更新overlay
+        update overlay
+        :param mode:
+        :param position: 要更新的位置(z, ) | where to update
+        :param arr: 更新的内容 | array to update
+        """
+        xl, yl = arr.shape
+        x_start, y_start = position.col, position.row
+        x_end, y_end = x_start + xl, y_start + yl
+        if UpdateMode.OVER_WRITE == mode:
+            pass
+        elif UpdateMode.APPEND == mode:
+            target_slice = self.overlay[position.height]
+            arr = np.logical_or(target_slice[x_start: x_end, y_start: y_end], arr)
+        else:
+            raise NotImplementedError
+        self.overlay[position.height, x_start: x_end, y_start: y_end] = arr.astype(np.int8)
+        self.overlayUpdated.emit()

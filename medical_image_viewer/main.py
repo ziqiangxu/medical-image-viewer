@@ -208,12 +208,17 @@ class MainWindow(QWidget):
         state = self.state
 
         test_file = files[0]
-        if test_file.endswith('.jpg'):
+        test_file_lower = test_file.lower()
+        if test_file_lower.endswith('.jpg'):
             # If jpg files got
             for file in files:
                 assert file.endswith('.jpg')
             files, volume = image.load_jpg_series(files)
             voxel_size = 0
+        elif test_file_lower.endswith('nii.gz') or test_file_lower.endswith('.nii'):
+            assert len(files) == 1, f'one NIfTI file support yet'
+            voxel_size, volume = image.load_nii(files[0])
+            volume = np.transpose(volume, [2, 0, 1])
         else:
             # or DCM files
             try:
@@ -336,14 +341,19 @@ if __name__ == '__main__':
     # config_log()
     app = QtWidgets.QApplication([])
 
-    dcm_files = []
+    files = []
     if len(sys.argv) > 1:
-        dcm_dir = sys.argv[1]
-        dcm_files = os.listdir(dcm_dir)
-        for i in range(len(dcm_files)):
-            dcm_files[i] = os.path.join(dcm_dir, dcm_files[i])
+        arg1 = sys.argv[1]
+        if os.path.isdir(arg1):
+            files = os.listdir(arg1)
+            for i in range(len(files)):
+                files[i] = os.path.join(arg1, files[i])
+        elif os.path.isfile(arg1):
+            files = [arg1]
+        else:
+            raise RuntimeError('arg1 needs to be a directory or file')
 
-    widget = MainWindow(files=dcm_files)
+    widget = MainWindow(files=files)
 
     widget.resize(1000, 600)
     widget.setWindowTitle('medical-image-viewer')

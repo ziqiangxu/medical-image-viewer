@@ -62,9 +62,9 @@ class MainWindow(QWidget):
 
     def _set_algorithm_ui_mode(self, algorithm: Algorithm):
         # About the switch mode, place the test value in the begin
-        if Algorithm.GROW_EVERY_SLICE == algorithm:
+        if algorithm == Algorithm.GROW_EVERY_SLICE:
             self.ui.input_threshold.setEnabled(False)
-        elif Algorithm.BY_THRESHOLD == algorithm:
+        elif algorithm in (Algorithm.BY_THRESHOLD, Algorithm.ITK_3d_GROW):
             self.ui.input_threshold.setEnabled(True)
         else:
             raise NotImplementedError
@@ -128,15 +128,17 @@ class MainWindow(QWidget):
             return
 
         # 注意seed和Pixel对象的坐标顺序
-
+        threshold = self.threshold
         algorithm = Algorithm(self.ui.combo_algorithm.currentText())
-        if Algorithm.GROW_EVERY_SLICE == algorithm:
-            overlay, _, _ = segmentation.grow_by_every_slice(seed, volume, ratio=3, min_iter=5)
+        if algorithm == Algorithm.GROW_EVERY_SLICE:
             self.ui.text_result.setText(f'Running, seed: {seed_}, shape: {volume.shape}')
-        elif Algorithm.BY_THRESHOLD == algorithm:
-            threshold = self.threshold
-            overlay = segmentation.region_grow_3d(volume, seed, threshold)
+            overlay, _, _ = segmentation.grow_by_every_slice(seed, volume, ratio=3, min_iter=5)
+        elif algorithm == Algorithm.BY_THRESHOLD:
             self.ui.text_result.setText(f'Running, seed: {seed_}, threshold: {threshold}, shape: {volume.shape}')
+            overlay = segmentation.region_grow_3d(volume, seed, threshold)
+        elif algorithm == Algorithm.ITK_3d_GROW:
+            self.ui.text_result.setText(f'Running, seed: {seed_}, threshold: {threshold}, shape: {volume.shape}')
+            overlay = segmentation.itk_3d_grow(volume, seed, threshold)
         else:
             raise NotImplementedError
 
@@ -170,20 +172,22 @@ class MainWindow(QWidget):
             return np.array(value_arr).mean()
 
         algorithm = Algorithm(self.ui.combo_algorithm.currentText())
-        if Algorithm.BY_THRESHOLD == algorithm:
+        if algorithm in (Algorithm.BY_THRESHOLD, Algorithm.ITK_3d_GROW):
 
             reference_intensity = get_reference_intensity()
             slice_ = seed_pixel.get_slice(volume)
-            threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
+            # threshold, _ = segmentation.get_optimized_threshold(slice_, seed_pixel, reference_intensity, 1.1)
+            threshold = value
 
-            _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
-            threshold = mean - std * 1.5
+            # _, mean, std = segmentation.grow_by_every_slice(seed_pixel, volume, 3)
+            # threshold = mean - std * 1.5
 
             # threshold = mean - std
             # threshold = mean
             self.ui.input_threshold.setText(f'{threshold:.1f}')
             self.ui.threshold_slider.setEnabled(True)
-            self.ui.threshold_slider.setRange(mean - 3 * std, mean + 3 * std)
+            # self.ui.threshold_slider.setRange(mean - 3 * std, mean + 3 * std)
+            self.ui.threshold_slider.setRange(int(threshold * 0.8), int(threshold * 1.2))
             self.ui.threshold_slider.setValue(threshold)
         elif algorithm == Algorithm.GROW_EVERY_SLICE:
             self.ui.threshold_slider.setEnabled(False)
@@ -220,7 +224,7 @@ class MainWindow(QWidget):
             voxel_size, volume = image.load_nii(files[0])
             volume = np.transpose(volume, [2, 0, 1])
         else:
-            # or DCM files
+           # or DCM files
             try:
                 files, volume = image.load_dcm_series(files)
                 # np.save('test2.npy', volume)

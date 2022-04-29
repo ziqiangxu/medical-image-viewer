@@ -72,7 +72,9 @@ class State(QObject):
         :param dcm_files: DICOM files sorted by the acquire position
         :return:
         """
-        # assert volume.ndim == 3 and volume.shape[0] == len(dcm_files)
+        assert volume.ndim == 3
+        # TODO check files when load jpg or DICOM
+        # assert volume.shape[0] == len(dcm_files)
         self._volume = volume
         self._dcm_files = dcm_files
 

@@ -14,7 +14,8 @@ from lymphangioma_segmentation.image import Pixel
 from lymphangioma_segmentation import image
 
 from constant import Algorithm
-from store import State
+from threshold_seg import VesselSeg
+from store import State, UpdateMode
 from widgets.histogram_lut import MivHistogramLUTWidget
 from widgets.image_view import MivImageView, ViewMode
 from window.about import AboutWindow
@@ -37,10 +38,40 @@ class MainWindow(QWidget):
         self.ui.btn_test.clicked.connect(self._test_clicked)
         self.ui.combo_algorithm.currentTextChanged.connect(self._algorithm_changed)
         self.ui.threshold_slider.valueChanged.connect(self.threshold_slider_value_changed)
+        self.ui.threshold_upper.valueChanged.connect(self._vessel_threshold_range_changed)
+        self.ui.btn_save_vessel_mask.clicked.connect(self._btn_save_vessel_mask_clicked)
         self.state.overlayUpdated.connect(self._overlay_updated)
 
+        self._vessel_seg: VesselSeg
         if files:
             self._load_files(files)
+    
+    def _btn_save_vessel_mask_clicked(self):
+        self._vessel_seg.save_vessel_mask_fintue()
+
+    def _vessel_threshold_range_changed(self, value: int):
+        threshold_upper = self.ui.threshold_upper.value()
+        slice_index = self.ui.image_viewer.ui.slice_slider.value()
+        self._vessel_seg.update_threshold(threshold_upper, slice_index)
+        # self.state.update_overlay(slice_index, 
+        #                           self._vessel_seg.merge_mask_seprated[:, :, slice_index],
+        #                           UpdateMode.OVER_WRITE)
+        # 更新视图
+        max = np.max((self.state.overlay[slice_index]))
+        print(f'max: {max}')
+        self.ui.image_viewer.refresh()
+
+
+    def _update_ui_for_vessel_seg(self):
+        value_range = self._vessel_seg.threshold_range
+        value = self._vessel_seg.vessel_roi_mean
+        
+        self.ui.threshold_lower.setRange(*value_range)
+        self.ui.threshold_lower.setValue(value)
+
+        self.ui.threshold_upper.setRange(*value_range)
+        self.ui.threshold_upper.setValue(value)
+        self.setWindowTitle(self._vessel_seg._finetune_file)
 
     @property
     def threshold(self):
@@ -192,6 +223,9 @@ class MainWindow(QWidget):
         elif algorithm == Algorithm.GROW_EVERY_SLICE:
             self.ui.threshold_slider.setEnabled(False)
             pass
+        elif algorithm == Algorithm.BY_RANGE:
+            #self.ui.
+            pass
         else:
             raise NotImplementedError
 
@@ -223,6 +257,7 @@ class MainWindow(QWidget):
             assert len(files) == 1, f'one NIfTI file support yet'
             voxel_size, volume = image.load_nii(files[0])
             volume = np.transpose(volume, [2, 0, 1])
+            self._vessel_seg = VesselSeg(files[0])
         else:
            # or DCM files
             try:
@@ -236,7 +271,13 @@ class MainWindow(QWidget):
         # state.set_voxel_size(voxel_size)
         self.ui.input_voxel_size.setText(str(voxel_size))
         state.set_volume(volume, files)
-        state.set_overlay(np.zeros(volume.shape, np.int8))
+        if self._vessel_seg:
+            state.set_overlay(np.transpose(
+                self._vessel_seg.merge_mask_seprated, [2, 0, 1])
+                )
+            self._update_ui_for_vessel_seg()
+        else:
+            state.set_overlay(np.zeros(volume.shape, np.int8))
 
         self._display_images(volume, files)
 
@@ -281,12 +322,20 @@ class UiForm:
 
         self.combo_algorithm = QComboBox()
         self.combo_algorithm.addItems([item.value for item in Algorithm.__members__.values()])
+        self.combo_algorithm.setCurrentText(Algorithm.BY_RANGE.value)
 
         self.input_threshold = QLineEdit('0')
         self.input_threshold.setPlaceholderText('')
         self.input_voxel_size = QLineEdit('')
         self.threshold_slider = QSlider(QtCore.Qt.Horizontal)
         self.threshold_slider.setEnabled(False)
+        self.threshold_lower = QSlider(QtCore.Qt.Horizontal)
+        self.threshold_lower.setRange(0, 100)
+        self.threshold_lower.setEnabled(True)
+        self.threshold_upper = QSlider(QtCore.Qt.Horizontal)
+        self.threshold_upper.setRange(0, 100)
+        self.threshold_upper.setEnabled(True)
+        self.btn_save_vessel_mask = QPushButton('保存vessel结果')
 
         self.btn_run = QPushButton('运行')
         self.btn_fine_tune = QPushButton('选择区域微调')
@@ -309,6 +358,9 @@ class UiForm:
         self.root_layout.addWidget(self.menu_bar)
         self.right_layout.addWidget(self.image_viewer)
         self.left_result.addWidget(self.threshold_slider)
+        self.left_result.addWidget(self.threshold_lower)
+        self.left_result.addWidget(self.threshold_upper)
+        self.left_result.addWidget(self.btn_save_vessel_mask)
         self.left_result.addWidget(self.btn_run)
         self.left_result.addWidget(self.btn_fine_tune)
 
@@ -360,7 +412,8 @@ if __name__ == '__main__':
     widget = MainWindow(files=files)
 
     widget.resize(1000, 600)
-    widget.setWindowTitle('medical-image-viewer')
+    widget.showMaximized()
+    # widget.setWindowTitle('medical-image-viewer')
     widget.show()
 
     sys.exit(app.exec_())

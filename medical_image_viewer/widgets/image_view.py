@@ -22,6 +22,7 @@ from constant import ViewMode, Algorithm
 class MivImageView(QWidget):
     # signal
     pixelSelected = QtCore.Signal(tuple, float)
+    DEFAULT_OPACITY = 150 # 0, 255
 
     def __init__(self, state: State):
         super().__init__()
@@ -32,10 +33,15 @@ class MivImageView(QWidget):
         self.roi: pg.ROI
         self.ui.image_item.mouseClickEvent = self._image_item_clicked
         self.ui.slice_slider.valueChanged.connect(self._show_current_slice)
+        self.ui.opacity_slider.valueChanged.connect(self._opacity_changed)
 
     @property
     def view_mode(self):
         return self._mode
+
+    def _opacity_changed(self, value: int):
+        lut = public.get_look_up_table(value)
+        self.ui.image_item_overlay.setLookupTable(lut)
 
     def _check_roi(self):
         if hasattr(self, 'roi'):
@@ -157,7 +163,7 @@ class MivImageView(QWidget):
 
 class UiForm:
     def __init__(self, parent: MivImageView):
-        self.root_layout = QVBoxLayout()
+        self.root_layout = QHBoxLayout()
 
         self.graphic_view = pg.GraphicsView()  # 被改写过的QGraphicView
         self.view_box = pg.ViewBox(invertY=True)  # 用于盛放图像控件，支持缩放功能
@@ -168,7 +174,7 @@ class UiForm:
         self.view_box.addItem(self.image_item)
 
         self.image_item_overlay = pg.ImageItem()
-        self.image_item_overlay.setLookupTable(public.get_look_up_table())  # 配置overlay控件的颜色查找表
+        self.image_item_overlay.setLookupTable(public.get_look_up_table(parent.DEFAULT_OPACITY))  # 配置overlay控件的颜色查找表
         self.view_box.addItem(self.image_item_overlay)
 
         # self.graphic_view.addItem(self.image_item)
@@ -178,19 +184,24 @@ class UiForm:
         self.graphic_view.addItem(self.text_top_right)
 
         # Qt的相关控件
-        self.slice_slider = QSlider(QtCore.Qt.Horizontal)
+        self.slice_slider = QSlider(QtCore.Qt.Vertical)
         self.slice_label = QLabel()
+        self.opacity_slider = QSlider(QtCore.Qt.Vertical)
+        self.opacity_slider.setRange(0, 255)
+        self.opacity_slider.setValue(parent.DEFAULT_OPACITY)
         self.view_mode_selector = QComboBox()
         self.view_mode_selector.setEnabled(False)
         self.view_mode_selector.addItems([mode.value for mode in ViewMode.__members__.values()])
 
-        # 布局相关
-        self.root_layout.addWidget(self.graphic_view)
 
         self.layout_slider = QHBoxLayout()
         self.layout_slider.addWidget(self.slice_slider)
         self.layout_slider.addWidget(self.slice_label)
         self.root_layout.addLayout(self.layout_slider)
+        self.root_layout.addWidget(self.opacity_slider)
+
+        # 布局相关
+        self.root_layout.addWidget(self.graphic_view)
 
         parent.setLayout(self.root_layout)
 
